@@ -81,11 +81,31 @@ exports.getAdminProfile = async (req, res) => {
   if (!adminId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const [rows] = await db.execute('SELECT id, username, email, role FROM admin_auth WHERE id = ?', [adminId]);
+    const [rows] = await db.execute(`
+      SELECT 
+        id, 
+        username, 
+        email, 
+        role, 
+        full_name, 
+        phone, 
+        address, 
+        language, 
+        time_zone, 
+        nationality, 
+        merchant_id, 
+        profile_pic 
+      FROM admin_auth 
+      WHERE id = ?
+    `, [adminId]);
 
     if (!rows.length) return res.status(404).json({ message: 'Admin not found' });
 
-    res.json(rows[0]);
+    const adminData = rows[0];
+
+    console.log("🔍 Fetched admin profile:", adminData);
+    res.json(adminData);
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
