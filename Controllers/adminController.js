@@ -91,17 +91,46 @@ exports.getAdminProfile = async (req, res) => {
   }
 };
 
-// ✅ Update Admin Profile
 exports.updateAdminProfile = async (req, res) => {
   const adminId = req.session.adminId || req.user?.id;
-  const { username, email } = req.body;
+  const {
+    full_name,
+    email,
+    phone,
+    address,
+    language,
+    time_zone,
+    nationality,
+    merchant_id
+  } = req.body;
+
+  let profile_pic = null;
+
+  if (req.file) {
+    profile_pic = `/uploads/${req.file.filename}`;
+  }
 
   if (!adminId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
     const [result] = await db.execute(
-      'UPDATE admin_auth SET username = ?, email = ? WHERE id = ?',
-      [username, email, adminId]
+      `UPDATE admin_auth 
+       SET full_name = ?, email = ?, phone = ?, address = ?, 
+           language = ?, time_zone = ?, nationality = ?, 
+           merchant_id = ?, profile_pic = ?
+       WHERE id = ?`,
+      [
+        full_name,
+        email,
+        phone,
+        address,
+        language,
+        time_zone,
+        nationality,
+        merchant_id,
+        profile_pic,
+        adminId
+      ]
     );
 
     if (result.affectedRows === 0) {

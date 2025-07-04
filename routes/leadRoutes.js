@@ -14,4 +14,8 @@ router.get('/', leadController.getLeads);
 // router.delete('/:id', verifyToken, leadController.deleteLead);
 router.delete('/:id', leadController.deleteLead);
 
+
+router.get('/today', leadController.getTodaysLeads);
+router.get('/todays-leads-hourly', leadController.getTodaysLeadsByHour);
+
 module.exports = router;
