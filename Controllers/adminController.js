@@ -74,22 +74,36 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// ✅ Get Admin Profile
+// ✅ Get Full Admin Profile
 exports.getAdminProfile = async (req, res) => {
   const adminId = req.session.adminId || req.user?.id;
 
   if (!adminId) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const [rows] = await db.execute('SELECT id, username, email, role FROM admin_auth WHERE id = ?', [adminId]);
+    const [rows] = await db.execute(`
+      SELECT 
+        id, username, full_name, email, phone, address, 
+        language, time_zone, nationality, merchant_id, 
+        profile_pic, role 
+      FROM admin_auth 
+      WHERE id = ?`, [adminId]);
 
     if (!rows.length) return res.status(404).json({ message: 'Admin not found' });
 
-    res.json(rows[0]);
+    const admin = rows[0];
+
+    // Build full image URL if file exists
+    if (admin.profile_pic) {
+      admin.profile_pic = `${req.protocol}://${req.get('host')}${admin.profile_pic}`;
+    }
+
+    res.json(admin);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 exports.updateAdminProfile = async (req, res) => {
   const adminId = req.session.adminId || req.user?.id;
