@@ -7,23 +7,49 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+
+const MySQLStore = require('express-mysql-session')(session);
+
+const sessionStore = new MySQLStore({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
+});
+
 app.use(helmet()); // Security middleware to set various HTTP headers
 
 app.set('trust proxy', 1); // Required if behind a proxy like Render, Vercel, etc.
 
+// app.use(
+//   session({
+//     secret: process.env.SESSION_SECRET || 'myDevSecretKey', // Use a strong key in production
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: {
+//       secure: process.env.NODE_ENV === 'production', // Only true when live
+//       httpOnly: true,                                // Prevent client-side JS access
+//       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+//       maxAge: 24 * 60 * 60 * 1000, // 1 day
+//     },
+//   })
+// );
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'myDevSecretKey', // Use a strong key in production
+    secret: process.env.SESSION_SECRET || 'myDevSecretKey',
     resave: false,
     saveUninitialized: false,
+    store: sessionStore, // ✅ use MySQL session store
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Only true when live
-      httpOnly: true,                                // Prevent client-side JS access
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000,
     },
   })
 );
+
 
 // ✅ CORS setup (allow cookies/session + frontend access)
 app.use(
