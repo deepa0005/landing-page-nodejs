@@ -18,4 +18,16 @@ router.delete('/:id', leadController.deleteLead);
 router.get('/today', leadController.getTodaysLeads);
 router.get('/todays-leads-hourly', leadController.getTodaysLeadsByHour);
 
+
+// Get total leads count only
+router.get('/count', async (req, res) => {
+  try {
+    const db = require('../Configs/db.config');
+    const [[{ total }]] = await db.execute('SELECT COUNT(*) as total FROM leads');
+    res.json({ total });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

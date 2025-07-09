@@ -1,15 +1,14 @@
-const db = require('../Configs/db.config');
+const leadModel = require('../models/LeadModel');
 
-// Save a new lead
+// Save a new lead (without phone and city)
 exports.createLead = async (req, res) => {
   try {
-    const { name, email, phone, message } = req.body;
-    const [result] = await db.execute(
-      'INSERT INTO leads (name, email, phone, message) VALUES (?, ?, ?, ?)',
-      [name, email, phone, message]
-    );
+    const { name, email, company, services, message } = req.body;
+    await leadModel.saveLead(name, email, company, services, message);
+    console.log("📥 Lead saved:", { name, email, company, services, message });
     res.status(201).json({ message: 'Lead saved successfully.' });
   } catch (err) {
+    console.error("📥 Lead save error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -17,10 +16,8 @@ exports.createLead = async (req, res) => {
 // Get all leads
 exports.getLeads = async (req, res) => {
   try {
-const [leads] = await db.execute('SELECT * FROM leads ORDER BY submitted_at DESC');
-console.log('Fetched leads:', leads);
-    res.json(leads);
-    
+    const [leads] = await leadModel.getAllLeads();
+    res.status(200).json(leads);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,32 +27,29 @@ console.log('Fetched leads:', leads);
 exports.deleteLead = async (req, res) => {
   try {
     const leadId = req.params.id;
-    const [result] = await db.execute('DELETE FROM leads WHERE id = ?', [leadId]);
+    await leadModel.deleteLeadById(leadId);
     res.json({ message: 'Lead deleted successfully.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-
-
-
-// Get today's leads data
+// Get today's leads (without phone and city)
 exports.getTodaysLeads = async (req, res) => {
   try {
     const [leads] = await db.execute(
-      `SELECT id, name, email, phone, city, message, submitted_at 
+      `SELECT id, name, email, company, services, message, submitted_at 
        FROM leads 
        WHERE DATE(submitted_at) = CURDATE() 
        ORDER BY submitted_at DESC`
     );
-
     res.status(200).json(leads);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+// Get hourly breakdown (unchanged)
 exports.getTodaysLeadsByHour = async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -68,7 +62,6 @@ exports.getTodaysLeadsByHour = async (req, res) => {
       ORDER BY hour
     `);
 
-    // Fill missing hours with 0
     const fullDay = Array.from({ length: 24 }, (_, i) => i);
     const result = fullDay.map(hour => {
       const found = rows.find(row => row.hour === hour);

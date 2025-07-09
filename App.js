@@ -54,7 +54,7 @@ app.use(
 // ✅ CORS setup (allow cookies/session + frontend access)
 app.use(
   cors({
-    origin: ['http://192.168.142.7:3000', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://landingpage-reactjs.vercel.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true, // required for session cookie
   })
