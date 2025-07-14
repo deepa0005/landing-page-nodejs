@@ -83,7 +83,7 @@ app.use('/api/export', require('./routes/exportRoutes'));
 
 // ✅ Server
 const PORT = process.env.PORT || 5000;
-const HOST = '192.168.1.6'; // LAN IP for external device access
+// const HOST = '192.168.1.6'; // LAN IP for external device access
 
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running at http://${HOST}:${PORT}`);
