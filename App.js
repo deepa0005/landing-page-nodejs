@@ -54,7 +54,7 @@ app.use(
 // ✅ CORS setup (allow cookies/session + frontend access)
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://landing-page-reactjs-eosin.vercel.app/'],
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://landing-page-reactjs-eosin.vercel.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true, // required for session cookie
   })
