@@ -7,10 +7,16 @@ const multer = require('multer');
 
 
 // Admin login
+// adminRoutes.js
 router.post('/login', adminController.adminLogin);
+
 
 // Change password (protected)
 router.post('/change-password', verifyToken, adminController.changePassword);
+
+router.post('/forgot-password', adminController.forgotPassword);
+router.post('/reset-password/:token', adminController.resetPassword);
+
 
 //admin logout 
 router.post('/logout', verifyToken, (req, res) => {
@@ -20,7 +26,9 @@ router.post('/logout', verifyToken, (req, res) => {
 
 
 // Admin profile
-router.get('/profile', verifyToken, adminController.getAdminProfile);
+router.get('/profile', 
+  // verifyToken,
+   adminController.getAdminProfile);
 
 
 
@@ -37,7 +45,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 router.put(
   '/update-profile',
-   verifyToken, 
+  //  verifyToken, 
   upload.single('profile_pic'), // ✅ Accept single file
   adminController.updateAdminProfile
 );
