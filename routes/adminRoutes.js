@@ -7,6 +7,9 @@ const multer = require('multer');
 
 
 // Admin login
+router.get('/', (req, res) => {
+  res.send('✅ Admin base route working');
+});
 // adminRoutes.js
 router.post('/login', adminController.adminLogin);
 
