@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/adminController');
-const verifyToken = require('../middlewares/isAuthenticated');
+// const verifyToken = require('../middlewares/isAuthenticated');
 
 const multer = require('multer');
 const authorizeRoles = require('../Middlewares/authorizeRoles');
@@ -18,7 +18,7 @@ router.post('/login', adminController.adminLogin);
 
 // Change password (protected)
 router.post('/change-password', 
-  verifyToken,
+  // verifyToken,
    adminController.changePassword);
 
 router.post('/forgot-password', adminController.forgotPassword);
@@ -27,7 +27,7 @@ router.post('/reset-password/:token', adminController.resetPassword);
 
 //admin logout 
 router.post('/logout', 
-  verifyToken, 
+  // verifyToken, 
   (req, res) => {
   // Invalidate the token on the client side
   res.json({ message: 'Logged out successfully' });
