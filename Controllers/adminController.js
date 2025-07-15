@@ -240,3 +240,33 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Reset failed", error: err.message });
   }
 };
+
+
+// ✅ Create Subadmin (Only by Admins)
+exports.createSubadmin = async (req, res) => {
+  const { username, password, email, full_name } = req.body;
+
+  try {
+    // Check if user exists
+    const [existing] = await db.execute(
+      'SELECT id FROM admin_auth WHERE username = ? OR email = ?',
+      [username, email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'Username or Email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await db.execute(
+      'INSERT INTO admin_auth (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)',
+      [username, hashedPassword, email, full_name, 'subadmin']
+    );
+
+    res.status(201).json({ message: 'Subadmin created successfully' });
+  } catch (err) {
+    console.error("❌ Error creating subadmin:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

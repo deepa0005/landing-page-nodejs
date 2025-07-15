@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/adminController');
-const { verifyToken } = require('../Middlewares/authMiddleware');
-const multer = require('multer');
+const verifyToken = require('../middlewares/isAuthenticated');
 
+const multer = require('multer');
+const authorizeRoles = require('../Middlewares/authorizeRoles');
+// const isAuthenticated = require('../Middlewares/isAuthenticated');
 
 
 // Admin login
@@ -15,14 +17,18 @@ router.post('/login', adminController.adminLogin);
 
 
 // Change password (protected)
-router.post('/change-password', verifyToken, adminController.changePassword);
+router.post('/change-password', 
+  verifyToken,
+   adminController.changePassword);
 
 router.post('/forgot-password', adminController.forgotPassword);
 router.post('/reset-password/:token', adminController.resetPassword);
 
 
 //admin logout 
-router.post('/logout', verifyToken, (req, res) => {
+router.post('/logout', 
+  verifyToken, 
+  (req, res) => {
   // Invalidate the token on the client side
   res.json({ message: 'Logged out successfully' });
 });
@@ -52,6 +58,15 @@ router.put(
   upload.single('profile_pic'), // ✅ Accept single file
   adminController.updateAdminProfile
 );
+
+// Create subadmin
+// router.post(
+//   '/create-subadmin',
+//   isAuthenticated,
+//   authorizeRoles('admin'),
+//   adminController.createSubadmin
+// );
+
 
 
 module.exports = router;

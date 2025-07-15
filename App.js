@@ -4,6 +4,7 @@ const cors = require('cors');
 const session = require('express-session');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const zohoRoutes = require("./routes/zohoRoutes");
 
 const app = express();
 
@@ -69,6 +70,8 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
+// ✅ Static file serving
+app.use("/api/zoho", zohoRoutes);
 
 // ✅ Middleware
 app.use(express.json());

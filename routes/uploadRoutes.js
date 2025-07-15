@@ -5,7 +5,8 @@ const db = require('../Configs/db.config');
 const fs = require('fs');                   
 const path = require('path'); 
 const uploadController = require('../Controllers/uploadController');
-const { verifyToken } = require('../Middlewares/authMiddleware');
+const verifyToken = require('../middlewares/isAuthenticated');
+
 
 // Set up Multer for file storage
 const storage = multer.diskStorage({
@@ -20,7 +21,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Admin upload (protected)
-router.post('/', verifyToken, upload.single('file'), uploadController.uploadFile);
+router.post('/',
+  //  verifyToken, 
+  upload.single('file'), uploadController.uploadFile);
 
 // Get uploaded files (optional: public or protected)
 router.get('/', uploadController.getUploads);
