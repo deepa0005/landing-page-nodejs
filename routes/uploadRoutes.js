@@ -5,7 +5,7 @@ const db = require('../Configs/db.config');
 const fs = require('fs');                   
 const path = require('path'); 
 const uploadController = require('../Controllers/uploadController');
-const verifyToken = require('../middlewares/isAuthenticated');
+// const verifyToken = require('../middlewares/isAuthenticated');
 
 
 // Set up Multer for file storage
@@ -29,7 +29,7 @@ router.post('/',
 router.get('/', uploadController.getUploads);
 
 // Replace/Update file by ID
-router.put('/replace/:id', verifyToken, upload.single('file'), async (req, res) => {
+router.put('/replace/:id', upload.single('file'), async (req, res) => {
   const uploadId = req.params.id;
 
   try {
@@ -62,7 +62,7 @@ router.put('/replace/:id', verifyToken, upload.single('file'), async (req, res) 
 
 
 // Delete uploaded file (protected)
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id',  async (req, res) => {
   const uploadId = req.params.id;
 
   try {
