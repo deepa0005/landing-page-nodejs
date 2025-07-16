@@ -49,21 +49,36 @@ exports.createLead = async (req, res) => {
     });
 
  } catch (err) {
-  console.error("❌ Lead save/Zoho sync error:");
+  console.log("❌ ERROR in send-lead endpoint");
+
   if (err.response) {
-    console.error("🔴 Zoho Response Error:", err.response.data);
+    // Zoho API responded with an error (400, 401, 422 etc.)
+    console.log("📩 Zoho API Error Response:");
+    console.log("Status:", err.response.status);
+    console.log("Data:", JSON.stringify(err.response.data, null, 2));
     res.status(500).json({
-      error: 'Zoho CRM error',
-      details: err.response.data
+      message: "Zoho CRM rejected the lead.",
+      status: err.response.status,
+      error: err.response.data
+    });
+  } else if (err.request) {
+    // Zoho did not respond
+    console.log("📡 No response from Zoho API:");
+    console.log(err.request);
+    res.status(500).json({
+      message: "No response from Zoho CRM.",
+      error: "Network error or invalid domain"
     });
   } else {
-    console.error("🔴 General Error:", err.message);
+    // Other error
+    console.log("⚠️ Other error:", err.message);
     res.status(500).json({
-      error: 'Internal Server Error',
-      details: err.message
+      message: "Internal server error",
+      error: err.message
     });
   }
 }
+
 };
 
 
