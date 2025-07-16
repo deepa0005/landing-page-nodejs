@@ -19,7 +19,8 @@ exports.createLead = async (req, res) => {
     // ✅ Step 3: Send lead to Zoho CRM
     const zohoRes = await axios.post(
 
-      "https://www.zohoapis.in/crm/v2/save-leads",
+      "https://www.zohoapis.in/crm/v2/Leads"
+,
       {
         data: [
           {

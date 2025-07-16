@@ -4,7 +4,7 @@ const leadController = require('../Controllers/leadController');
 const { verifyToken } = require('../Middlewares/authMiddleware');
 
 // Public: Save lead
-router.post('/save-leads', leadController.createLead);
+router.post('/save-lead', leadController.createLead);
 
 // Admin: Get & delete leads
 // router.get('/', verifyToken, leadController.getLeads);
