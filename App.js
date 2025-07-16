@@ -18,6 +18,9 @@ const sessionStore = new MySQLStore({
   database: process.env.DB_NAME
 });
 
+
+app.use(express.json());
+
 app.use(helmet()); // Security middleware to set various HTTP headers
 
 app.set('trust proxy', 1); // Required if behind a proxy like Render, Vercel, etc.
@@ -75,7 +78,7 @@ app.use(limiter);
 app.use("/api/zoho", zohoRoutes);
 
 // ✅ Middleware
-app.use(express.json());
+
 app.use('/uploads', express.static('uploads')); // Serve uploaded files
 
 // ✅ API Routes
