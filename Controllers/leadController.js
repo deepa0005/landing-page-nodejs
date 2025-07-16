@@ -8,31 +8,32 @@ exports.createLead = async (req, res) => {
   try {
     const { name, email, phone, location, type, company, services } = req.body;
 
-    // ✅ Step 1: Save to local DB
+    console.log("📨 Incoming Lead:", req.body);
+
     await leadModel.saveLead(name, email, phone, location, type, company, services);
-    console.log("📥 Lead saved locally:", { name, email, phone, location, type, company, services });
 
-    // ✅ Step 2: Get Zoho access token
     const accessToken = await getZohoAccessToken();
-    console.log("🔐 Zoho Token:", accessToken);
 
-    // ✅ Step 3: Send lead to Zoho CRM
+    console.log("🔐 Token received:", accessToken);
+
+    const zohoPayload = {
+      data: [
+        {
+          Last_Name: name || "Visitor",
+          Email: email,
+          Company: company || (type === "individual" ? "Individual" : "Website"),
+          Phone: phone || "0000000000",
+          Lead_Source: services || "Website",
+          Description: `Location: ${location} | Type: ${type}`
+        }
+      ]
+    };
+
+    console.log("📤 Sending to Zoho:", JSON.stringify(zohoPayload, null, 2));
+
     const zohoRes = await axios.post(
-
-      "https://www.zohoapis.in/crm/v2/Leads"
-,
-      {
-        data: [
-          {
-            Last_Name: name || "Visitor",
-            Email: email,
-            Company: company || (type === "individual" ? "Individual" : "Website"),
-            Phone: phone || "0000000000",
-            Lead_Source: services || "Website",
-            Description: `Location: ${location} | Type: ${type}`
-          }
-        ]
-      },
+      "https://www.zohoapis.in/crm/v2/Leads",
+      zohoPayload,
       {
         headers: {
           Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -41,15 +42,18 @@ exports.createLead = async (req, res) => {
       }
     );
 
-    console.log("✅ Sent to Zoho:", zohoRes.data);
+    console.log("✅ Zoho Response:", zohoRes.data);
 
     res.status(201).json({
       message: 'Lead saved successfully and sent to Zoho CRM.'
     });
 
   } catch (err) {
-    console.error("❌ Lead save/Zoho sync error:", err.response?.data || err.message);
-    res.status(500).json({ error: 'Lead saved locally but Zoho CRM failed', details: err.message });
+    console.error("❌ Zoho Sync Error:", err.response?.data || err.message);
+    res.status(500).json({
+      error: 'Zoho CRM Error',
+      details: err.response?.data || err.message
+    });
   }
 };
 

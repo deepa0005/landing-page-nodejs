@@ -4,7 +4,9 @@ const leadController = require('../Controllers/leadController');
 const { verifyToken } = require('../Middlewares/authMiddleware');
 
 // Public: Save lead
-router.post('/save-lead', leadController.createLead);
+router.post('/', leadController.createLead);
+router.post('/zoho/send-lead', leadController.createLead);
+
 
 // Admin: Get & delete leads
 // router.get('/', verifyToken, leadController.getLeads);
