@@ -48,13 +48,22 @@ exports.createLead = async (req, res) => {
       message: 'Lead saved successfully and sent to Zoho CRM.'
     });
 
-  } catch (err) {
-    console.error("❌ Zoho Sync Error:", err.response?.data || err.message);
+ } catch (err) {
+  console.error("❌ Lead save/Zoho sync error:");
+  if (err.response) {
+    console.error("🔴 Zoho Response Error:", err.response.data);
     res.status(500).json({
-      error: 'Zoho CRM Error',
-      details: err.response?.data || err.message
+      error: 'Zoho CRM error',
+      details: err.response.data
+    });
+  } else {
+    console.error("🔴 General Error:", err.message);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      details: err.message
     });
   }
+}
 };
 
 
