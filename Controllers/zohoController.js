@@ -7,28 +7,28 @@ exports.sendLeadToZoho = async (req, res) => {
   try {
     const accessToken = await getZohoAccessToken();
 
-    const response = await axios.post(
-      "https://www.zohoapis.in/crm/v2/Leads",
+ const response = await axios.post(
+  "https://www.zohoapis.in/crm/v2/Leads",
+  {
+    data: [
       {
-        data: [
-          {
-            Last_Name: name || "Unknown",
-            Email: email,
-            Phone: phone,
-            Company: company || "Landing Page",
-            Description: message || "",
-            Lead_Source: services || "Website"
-          }
-        ]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-            // Authorization: `Zoho-oauthtoken ${accessToken}`,
-          "Content-Type": "application/json"
-        }
+        Last_Name: name || "Unknown",
+        Email: email,
+        Phone: phone,
+        Company: company || "Landing Page",
+        Description: message || "",
+        Lead_Source: "Website"  // force to safe value
       }
-    );
+    ]
+  },
+  {
+    headers: {
+      Authorization: `Zoho-oauthtoken ${accessToken}`, // ✅ fixed
+      "Content-Type": "application/json"
+    }
+  }
+);
+
 
     res.status(200).json({ success: true, data: response.data });
   } catch (err) {
