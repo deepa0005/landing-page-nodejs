@@ -24,7 +24,7 @@ const getZohoAccessToken = async () => {
         grant_type: "refresh_token",
       },
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/x-www-form-urlencoded", // ✅ Only this is needed
       },
     });
 
