@@ -36,8 +36,8 @@ exports.createLead = async (req, res) => {
       zohoPayload,
       {
         headers: {
-          // Authorization: `Zoho-oauthtoken ${accessToken}`,
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Zoho-oauthtoken ${accessToken}`,
+          // Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json"
         }
       }

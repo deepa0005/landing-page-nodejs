@@ -23,8 +23,7 @@ exports.sendLeadToZoho = async (req, res) => {
       },
       {
         headers: {
-          // Authorization: `Zoho-oauthtoken ${accessToken}`,
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Zoho-oauthtoken ${accessToken}`,
           "Content-Type": "application/json"
         }
       }
