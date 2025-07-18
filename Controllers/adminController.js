@@ -1,14 +1,17 @@
 const db = require('../Configs/db.config');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
 
-// ✅ Admin Login
 exports.adminLogin = async (req, res) => {
   const { username, password } = req.body;
 
-  try {
-    console.log("🔍 Incoming login:", { username, password });
 
+  const resetTokens = {}; // Format: { token: { email, expires } }
+
+  
+  try {
     const [rows] = await db.execute('SELECT * FROM admin_auth WHERE username = ?', [username]);
     const admin = rows[0];
 
@@ -17,256 +20,324 @@ exports.adminLogin = async (req, res) => {
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
-    // ✅ Set session
     req.session.adminId = admin.id;
-    console.log("🟢 Session set:", req.session.adminId);
+    req.session.role = admin.role;
+    req.session.permissions = admin.permissions;
 
-    // ✅ Also send JWT for frontend if needed
-    const token = jwt.sign({ id: admin.id, username: admin.username }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
+    const token = jwt.sign(
+      {
+        id: admin.id,
+        username: admin.username,
+        role: admin.role,
+        permissions: admin.permissions
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
 
     res.status(200).json({
       message: 'Login successful',
       token,
       username: admin.username,
+      role: admin.role,
+      permissions: admin.permissions ? JSON.parse(admin.permissions) : {}
     });
   } catch (err) {
-    console.error("❌ Login error:", err);
+    console.error("Login error:", err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-// ✅ Admin Logout
-exports.logout = (req, res) => {
-  try {
-    req.session.destroy((err) => {
-      if (err) return res.status(500).json({ message: 'Logout failed', error: err });
-      res.clearCookie('connect.sid'); // Optional: clear session cookie
-      res.json({ message: 'Admin logged out successfully.' });
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+exports.adminLogout = (req, res) => {
+  req.session.destroy(err => {
+    if (err) return res.status(500).json({ message: 'Logout failed' });
+    res.clearCookie('connect.sid');
+    res.status(200).json({ message: 'Logout successful' });
+  });
 };
 
-// ✅ Change Password
 exports.changePassword = async (req, res) => {
-  const adminId = req.session.adminId || req.user?.id; // Support both session and JWT
+  const adminId = req.session.adminId;
+  const { currentPassword, newPassword } = req.body;
 
-  if (!adminId) return res.status(401).json({ message: 'Unauthorized' });
-
-  const { oldPassword, newPassword } = req.body;
+  if (!adminId) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
 
   try {
-    const [rows] = await db.execute('SELECT * FROM admin_auth WHERE id = ?', [adminId]);
+    const [rows] = await db.execute('SELECT password FROM admin_auth WHERE id = ?', [adminId]);
     const admin = rows[0];
 
-    const isMatch = await bcrypt.compare(oldPassword, admin.password);
-    if (!isMatch) return res.status(400).json({ message: 'Old password incorrect' });
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+    if (!isMatch) return res.status(401).json({ message: 'Current password is incorrect' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.execute('UPDATE admin_auth SET password = ? WHERE id = ?', [hashedPassword, adminId]);
 
-    res.json({ message: 'Password updated successfully.' });
+    res.status(200).json({ message: 'Password updated successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Change password error:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
-// ✅ Get Full Admin Profile
-exports.getAdminProfile = async (req, res) => {
-  const adminId = 1; // 🔥 Hardcoded for testing (make sure this admin exists in DB)
-
-  try {
-    const [rows] = await db.execute(`
-      SELECT 
-        id, username, full_name, email, phone, address, 
-        language, time_zone, nationality, merchant_id, 
-        profile_pic, role 
-      FROM admin_auth 
-      WHERE id = ?
-    `, [adminId]);
-
-    if (!rows.length) {
-      return res.status(404).json({ message: 'Admin not found' });
-    }
-
-    const admin = rows[0];
-
-    // Prepend full URL to image if it exists
-    if (admin.profile_pic) {
-      admin.profile_pic = `${req.protocol}://${req.get('host')}${admin.profile_pic}`;
-    }
-
-    res.json(admin);
-  } catch (err) {
-    console.error("❌ DB Error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-
-exports.updateAdminProfile = async (req, res) => {
-  // const adminId = req.session.adminId || req.user?.id; // Support both session and JWT
-    const adminId = 1; // ✅ hardcoded for dev
-  const {
-    full_name,
-    email,
-    phone,
-    address,
-    language,
-    time_zone,
-    nationality,
-    merchant_id
-  } = req.body;
-
-  let profile_pic = null;
-
-  if (req.file) {
-    profile_pic = `/uploads/${req.file.filename}`;
-  }
-
-  if (!adminId) return res.status(401).json({ message: 'Unauthorized' });
-
-  try {
-    const [result] = await db.execute(
-      `UPDATE admin_auth 
-       SET full_name = ?, email = ?, phone = ?, address = ?, 
-           language = ?, time_zone = ?, nationality = ?, 
-           merchant_id = ?, profile_pic = ?
-       WHERE id = ?`,
-      [
-        full_name,
-        email,
-        phone,
-        address,
-        language,
-        time_zone,
-        nationality,
-        merchant_id,
-        profile_pic,
-        adminId
-      ]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Profile not found or no changes made' });
-    }
-
-    res.json({ message: 'Profile updated successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-
-
-// ✅ Forgot Password and mail
 
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const [rows] = await db.execute("SELECT * FROM admin_auth WHERE email = ?", [email]);
-    const admin = rows[0];
-
-    if (!admin) {
-      return res.status(404).json({ message: "Admin not found with that email" });
+    const [rows] = await db.execute('SELECT id FROM admin_auth WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Email not found' });
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiry = Date.now() + 3600000; // 1 hour
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    resetTokens[token] = {
+      email,
+      expires: Date.now() + 15 * 60 * 1000, // token valid for 15 minutes
+    };
 
-    await db.execute(
-      "UPDATE admin_auth SET reset_token = ?, reset_token_expiry = ? WHERE id = ?",
-      [token, expiry, admin.id]
-    );
-
-    const resetLink = `http://${req.headers.host}/reset-password/${token}`;
-
-    // ✅ Mail transport
-    const transporter = nodemailer.createTransport({
-      service: "Gmail", // or "Mailtrap"/"SendGrid" etc
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-      },
+    // In real apps, send via email (like nodemailer)
+    res.status(200).json({
+      message: 'Reset token generated successfully',
+      token, // send only for testing; remove in production
     });
-
-    await transporter.sendMail({
-      from: `"Admin Panel" <${process.env.MAIL_USER}>`,
-      to: email,
-      subject: "Reset Your Password",
-      html: `
-        <p>Hello ${admin.full_name || admin.username},</p>
-        <p>You requested a password reset. Click below to proceed:</p>
-        <a href="${resetLink}">${resetLink}</a>
-        <p>This link is valid for 1 hour.</p>
-      `,
-    });
-
-    res.json({ message: "Reset link sent to your email" });
-  } catch (err) {
-    console.error("❌ Forgot Password Error:", err);
-    res.status(500).json({ message: "Failed to send reset link", error: err.message });
+  } catch (error) {
+    console.error('❌ Forgot Password Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-
+// 👉 Reset Password using Token
 exports.resetPassword = async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
+  const { token, newPassword } = req.body;
 
   try {
-    const [rows] = await db.execute(
-      "SELECT * FROM admin_auth WHERE reset_token = ? AND reset_token_expiry > ?",
-      [token, Date.now()]
-    );
+    const record = resetTokens[token];
+    if (!record) {
+      return res.status(400).json({ message: 'Invalid token' });
+    }
 
-    const admin = rows[0];
-    if (!admin) return res.status(400).json({ message: "Invalid or expired token" });
+    if (Date.now() > record.expires) {
+      delete resetTokens[token];
+      return res.status(400).json({ message: 'Token expired' });
+    }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.execute('UPDATE admin_auth SET password = ? WHERE email = ?', [
+      hashedPassword,
+      record.email,
+    ]);
 
-    await db.execute(
-      "UPDATE admin_auth SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?",
-      [hashed, admin.id]
-    );
-
-    res.json({ message: "Password reset successful" });
-  } catch (err) {
-    console.error("❌ Reset Password Error:", err);
-    res.status(500).json({ message: "Reset failed", error: err.message });
+    delete resetTokens[token]; // Remove used token
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('❌ Reset Password Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 
-// ✅ Create Subadmin (Only by Admins)
-exports.createSubadmin = async (req, res) => {
-  const { username, password, email, full_name } = req.body;
+exports.getAdminProfile = async (req, res) => {
+  const adminId = req.session.adminId;
 
   try {
-    // Check if user exists
-    const [existing] = await db.execute(
-      'SELECT id FROM admin_auth WHERE username = ? OR email = ?',
-      [username, email]
-    );
+    const [rows] = await db.execute('SELECT id, username, email, full_name, profile_image, role, permissions FROM admin_auth WHERE id = ?', [adminId]);
+    const admin = rows[0];
 
-    if (existing.length > 0) {
-      return res.status(400).json({ message: 'Username or Email already exists' });
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+
+    res.status(200).json({
+      ...admin,
+      permissions: admin.permissions ? JSON.parse(admin.permissions) : {}
+    });
+  } catch (err) {
+    console.error("Get profile error:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.updateAdminProfile = async (req, res) => {
+  const adminId = req.session.adminId;
+  const { full_name, email } = req.body;
+  let profileImage = null;
+
+  if (req.file) {
+    profileImage = req.file.filename;
+
+    const [rows] = await db.execute('SELECT profile_image FROM admin_auth WHERE id = ?', [adminId]);
+    const oldImage = rows[0]?.profile_image;
+
+    if (oldImage) {
+      const oldImagePath = path.join(__dirname, '../uploads/admin_profiles', oldImage);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+  }
+
+  try {
+    const updateQuery = profileImage
+      ? 'UPDATE admin_auth SET full_name = ?, email = ?, profile_image = ? WHERE id = ?'
+      : 'UPDATE admin_auth SET full_name = ?, email = ? WHERE id = ?';
+
+    const values = profileImage
+      ? [full_name, email, profileImage, adminId]
+      : [full_name, email, adminId];
+
+    await db.execute(updateQuery, values);
+    res.status(200).json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// ✅ Create subadmin with permissions
+exports.createSubadmin = async (req, res) => {
+  try {
+    const {
+      full_name,
+      email,
+      phone,
+      address,
+      role = 'subadmin',
+      permissions
+    } = req.body;
+
+    let profile_pic = null;
+    if (req.file) {
+      profile_pic = req.file.filename;
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const [existing] = await db.execute('SELECT id FROM subadmins WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const permissionsJSON = JSON.stringify(permissions || {});
 
     await db.execute(
-      'INSERT INTO admin_auth (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)',
-      [username, hashedPassword, email, full_name, 'subadmin']
+      'INSERT INTO subadmins (full_name, email, phone, address, role, permissions, profile_pic) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [full_name, email, phone, address, role, permissionsJSON, profile_pic]
     );
 
     res.status(201).json({ message: 'Subadmin created successfully' });
   } catch (err) {
-    console.error("❌ Error creating subadmin:", err);
+    console.error("Error creating subadmin:", err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+
+// ✅ Get all subadmins
+exports.getAllSubadmins = async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT id, full_name, email, phone, address, role, permissions, profile_pic, created_at FROM subadmins'
+    );
+
+    const parsed = rows.map(row => ({
+      ...row,
+      permissions: row.permissions ? JSON.parse(row.permissions) : {}
+    }));
+
+    res.status(200).json(parsed);
+  } catch (err) {
+    console.error("Error fetching subadmins:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
+exports.updateSubadmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      full_name,
+      email,
+      phone,
+      address,
+      role,
+      permissions
+    } = req.body;
+
+    let profile_pic = null;
+    if (req.file) {
+      profile_pic = req.file.filename;
+    }
+
+    // Check if subadmin exists
+    const [existing] = await db.execute('SELECT * FROM subadmins WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Subadmin not found' });
+    }
+
+    const updatedFields = [];
+    const values = [];
+
+    if (full_name) {
+      updatedFields.push('full_name = ?');
+      values.push(full_name);
+    }
+    if (email) {
+      updatedFields.push('email = ?');
+      values.push(email);
+    }
+    if (phone) {
+      updatedFields.push('phone = ?');
+      values.push(phone);
+    }
+    if (address) {
+      updatedFields.push('address = ?');
+      values.push(address);
+    }
+    if (role) {
+      updatedFields.push('role = ?');
+      values.push(role);
+    }
+    if (permissions) {
+      updatedFields.push('permissions = ?');
+      values.push(JSON.stringify(permissions));
+    }
+    if (profile_pic) {
+      updatedFields.push('profile_pic = ?');
+      values.push(profile_pic);
+    }
+
+    if (updatedFields.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    const sql = `UPDATE subadmins SET ${updatedFields.join(', ')} WHERE id = ?`;
+    values.push(id);
+
+    await db.execute(sql, values);
+
+    res.status(200).json({ message: 'Subadmin updated successfully' });
+  } catch (err) {
+    console.error("Error updating subadmin:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.deleteSubadmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [existing] = await db.execute('SELECT * FROM subadmins WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Subadmin not found' });
+    }
+
+    await db.execute('DELETE FROM subadmins WHERE id = ?', [id]);
+
+    res.status(200).json({ message: 'Subadmin deleted successfully' });
+  } catch (err) {
+    console.error("Error deleting subadmin:", err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+

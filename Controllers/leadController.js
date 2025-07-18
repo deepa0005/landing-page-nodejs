@@ -12,74 +12,17 @@ exports.createLead = async (req, res) => {
 
     await leadModel.saveLead(name, email, phone, location, type, company, services);
 
-    const accessToken = await getZohoAccessToken();
-
-    console.log("🔐 Token received:", accessToken);
-
-    const zohoPayload = {
-      data: [
-        {
-          Last_Name: name || "Visitor",
-          Email: email,
-          Company: company || (type === "individual" ? "Individual" : "Website"),
-          Phone: phone || "0000000000",
-          Lead_Source: services || "Website",
-          Description: `Location: ${location} | Type: ${type}`
-        }
-      ]
-    };
-
-    console.log("📤 Sending to Zoho:", JSON.stringify(zohoPayload, null, 2));
-
-    const zohoRes = await axios.post(
-      "https://www.zohoapis.in/crm/v2/Leads",
-      zohoPayload,
-      {
-        headers: {
-          // Authorization: `Zoho-oauthtoken ${accessToken}`,
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-
-    console.log("✅ Zoho Response:", zohoRes.data);
-
     res.status(201).json({
-      message: 'Lead saved successfully and sent to Zoho CRM.'
+      message: 'Lead saved successfully.'
     });
 
- } catch (err) {
-  console.log("❌ ERROR in send-lead endpoint");
-
-  if (err.response) {
-    // Zoho API responded with an error (400, 401, 422 etc.)
-    console.log("📩 Zoho API Error Response:");
-    console.log("Status:", err.response.status);
-    console.log("Data:", JSON.stringify(err.response.data, null, 2));
-    res.status(500).json({
-      message: "Zoho CRM rejected the lead.",
-      status: err.response.status,
-      error: err.response.data
-    });
-  } else if (err.request) {
-    // Zoho did not respond
-    console.log("📡 No response from Zoho API:");
-    console.log(err.request);
-    res.status(500).json({
-      message: "No response from Zoho CRM.",
-      error: "Network error or invalid domain"
-    });
-  } else {
-    // Other error
-    console.log("⚠️ Other error:", err.message);
+  } catch (err) {
+    console.error("❌ Failed to save lead:", err.message);
     res.status(500).json({
       message: "Internal server error",
       error: err.message
     });
   }
-}
-
 };
 
 
@@ -109,8 +52,8 @@ exports.getTodaysLeads = async (req, res) => {
     const [leads] = await db.execute(`
       SELECT id, name, email, company, services, message, submitted_at
       FROM leads
-      WHERE submitted_at >= CONVERT_TZ(CURDATE(), '+00:00', '+05:30')
-        AND submitted_at < CONVERT_TZ(CURDATE() + INTERVAL 1 DAY, '+00:00', '+05:30')
+      WHERE CONVERT_TZ(submitted_at, '+00:00', '+05:30') >= CURDATE()
+        AND CONVERT_TZ(submitted_at, '+00:00', '+05:30') < CURDATE() + INTERVAL 1 DAY
       ORDER BY submitted_at DESC
     `);
     res.status(200).json(leads);
@@ -241,4 +184,33 @@ exports.getTopService = async (req, res) => {
   }
 };
 
+// View all leads (admin + subadmin)
+exports.viewLeads = async (req, res) => {
+  try {
+    const [leads] = await leadModel.getAllLeads(); // uses your existing DB model
+    res.status(200).json(leads);
+  } catch (err) {
+    console.error("❌ Error fetching leads:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Edit a lead by ID (admin + subadmin)
+exports.editLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    const result = await leadModel.updateLeadById(id, updatedData); // You need to define this function in leadModel
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Lead not found." });
+    }
+
+    res.status(200).json({ message: `Lead ${id} updated successfully.` });
+  } catch (err) {
+    console.error("❌ Error updating lead:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 

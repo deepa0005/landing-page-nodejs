@@ -1,20 +1,52 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../Controllers/adminController');
-// const verifyToken = require('../middlewares/isAuthenticated');
-
+const leadController = require('../Controllers/leadController');
+const isAuthenticated = require('../Middlewares/isAuthenticated');
 const multer = require('multer');
 const authorizeRoles = require('../Middlewares/authorizeRoles');
 // const isAuthenticated = require('../Middlewares/isAuthenticated');
 
-
-// Admin login
-router.get('/', (req, res) => {
-  res.send('✅ Admin base route working');
+  // Multer setup for profile photo
+// ✅ Multer setup must come BEFORE any routes that use it
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
+  }
 });
-// adminRoutes.js
-router.post('/login', adminController.adminLogin);
+const upload = multer({ storage });
+// Admin-only: Create Subadmin
+router.post("/create-subadmin", isAuthenticated, authorizeRoles("admin"), adminController.createSubadmin);
 
+// Admin-only: Get All Subadmins
+router.get("/get-subadmins", isAuthenticated, authorizeRoles("admin"), adminController.getAllSubadmins);
+
+
+// Subadmin Access with Fine-Grained Permissions (example)
+router.get("/leads", isAuthenticated, authorizeRoles("admin", "subadmin"), leadController.viewLeads);
+router.put("/leads/:id", isAuthenticated, authorizeRoles("admin", "subadmin"), leadController.editLead);
+
+
+// Admin-only: Update Subadmin
+router.put(
+  '/update-subadmin/:id',
+  isAuthenticated,
+  authorizeRoles("admin"),
+  upload.single('profile_pic'),
+  adminController.updateSubadmin
+);
+
+// Admin-only: Delete Subadmin
+router.delete(
+  '/delete-subadmin/:id',
+  isAuthenticated,
+  authorizeRoles("admin"),
+  adminController.deleteSubadmin
+);
 
 // Change password (protected)
 router.post('/change-password', 
@@ -41,17 +73,8 @@ router.get('/profile',
 
 
 
-// Multer setup for profile photo
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // ✅ Ensure this folder exists
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + '-' + file.originalname;
-    cb(null, uniqueName);
-  }
-});
-const upload = multer({ storage });
+
+
 router.put(
   '/update-profile',
   //  verifyToken, 
@@ -59,13 +82,7 @@ router.put(
   adminController.updateAdminProfile
 );
 
-// Create subadmin
-// router.post(
-//   '/create-subadmin',
-//   isAuthenticated,
-//   authorizeRoles('admin'),
-//   adminController.createSubadmin
-// );
+
 
 
 
