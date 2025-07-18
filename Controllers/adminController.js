@@ -141,7 +141,7 @@ exports.resetPassword = async (req, res) => {
 
 
 exports.getAdminProfile = async (req, res) => {
-  const adminId = req.session?.adminId;
+   const adminId = req.user?.id;
 
   if (!adminId) {
     return res.status(400).json({ message: 'Admin ID is missing from session.' });
