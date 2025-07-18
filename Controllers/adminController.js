@@ -154,7 +154,7 @@ exports.getAdminProfile = async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      'SELECT full_name, email, phone, address, language, time_zone, nationality, merchant_id, role, profile_pic FROM users WHERE id = ?',
+      'SELECT full_name, email, phone, address, language, time_zone, nationality, merchant_id, role, profile_pic FROM admin_auth WHERE id = ?',
       [adminId]
     );
 
