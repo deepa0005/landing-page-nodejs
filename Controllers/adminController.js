@@ -142,8 +142,9 @@ exports.resetPassword = async (req, res) => {
 
 // controllers/adminController.js
 
+// controllers/adminController.js
 exports.getAdminProfile = async (req, res) => {
-  const adminId = req.user?.id;
+  const adminId = req.user?.id; // ✅ Comes from token now
 
   if (!adminId) {
     return res.status(400).json({ message: 'Admin ID is missing from token.' });
@@ -159,12 +160,13 @@ exports.getAdminProfile = async (req, res) => {
 
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
 
-    res.status(200).json(admin); // ✅ permissions removed
+    res.status(200).json(admin);
   } catch (err) {
     console.error("Get profile error:", err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 

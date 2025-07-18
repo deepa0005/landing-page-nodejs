@@ -83,7 +83,7 @@ router.post('/logout',
 
 // Admin profile
 router.get('/profile', 
-  // isAuthenticated,
+  isAuthenticated,
    adminController.getAdminProfile);
 
 
