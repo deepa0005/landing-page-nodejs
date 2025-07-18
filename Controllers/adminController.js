@@ -178,34 +178,48 @@ exports.updateAdminProfile = async (req, res) => {
   const { full_name, email } = req.body;
   let profileImage = null;
 
-  if (req.file) {
-    profileImage = req.file.filename;
-
-    const [rows] = await db.execute('SELECT profile_image FROM admin_auth WHERE id = ?', [adminId]);
-    const oldImage = rows[0]?.profile_image;
-
-    if (oldImage) {
-      const oldImagePath = path.join(__dirname, '../uploads/admin_profiles', oldImage);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
-    }
+  if (!adminId) {
+    return res.status(400).json({ message: "Admin ID missing from token." });
   }
 
   try {
+    if (req.file) {
+      profileImage = req.file.filename;
+
+      // Delete old image if exists
+      const [rows] = await db.execute(
+        "SELECT profile_image FROM admin_auth WHERE id = ?",
+        [adminId]
+      );
+
+      const oldImage = rows[0]?.profile_image;
+      if (oldImage) {
+        const oldImagePath = path.join(
+          __dirname,
+          "../uploads/admin_profiles",
+          oldImage
+        );
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+
+    // Build query
     const updateQuery = profileImage
-      ? 'UPDATE admin_auth SET full_name = ?, email = ?, profile_image = ? WHERE id = ?'
-      : 'UPDATE admin_auth SET full_name = ?, email = ? WHERE id = ?';
+      ? "UPDATE admin_auth SET full_name = ?, email = ?, profile_image = ? WHERE id = ?"
+      : "UPDATE admin_auth SET full_name = ?, email = ? WHERE id = ?";
 
     const values = profileImage
       ? [full_name, email, profileImage, adminId]
       : [full_name, email, adminId];
 
     await db.execute(updateQuery, values);
-    res.status(200).json({ message: 'Profile updated successfully' });
+
+    res.status(200).json({ message: "Profile updated successfully" });
   } catch (err) {
     console.error("Update profile error:", err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
