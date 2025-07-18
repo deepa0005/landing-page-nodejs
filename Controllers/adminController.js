@@ -140,8 +140,10 @@ exports.resetPassword = async (req, res) => {
 };
 
 
+// controllers/adminController.js
+
 exports.getAdminProfile = async (req, res) => {
-   const adminId = req.user?.id;
+  const adminId = req.session?.adminId;
 
   if (!adminId) {
     return res.status(400).json({ message: 'Admin ID is missing from session.' });
@@ -149,7 +151,7 @@ exports.getAdminProfile = async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      'SELECT id, username, email, full_name, profile_image, role, permissions FROM admin_auth WHERE id = ?',
+      'SELECT id, username, email, full_name, role, permissions FROM admin_auth WHERE id = ?',
       [adminId]
     );
 
@@ -166,6 +168,7 @@ exports.getAdminProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 exports.updateAdminProfile = async (req, res) => {
