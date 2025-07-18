@@ -75,11 +75,14 @@ router.post('/logout',
 });
 
 
-// Admin profile
-router.get('/profile', 
-  // verifyToken,
-   adminController.getAdminProfile);
+// // Admin profile
+// router.get('/profile', 
+//   // verifyToken,
+//    adminController.getAdminProfile);
 
+
+// Admin profile
+router.get('/profile', isAuthenticated, adminController.getAdminProfile);
 
 
 
