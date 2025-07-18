@@ -143,15 +143,15 @@ exports.resetPassword = async (req, res) => {
 // controllers/adminController.js
 
 exports.getAdminProfile = async (req, res) => {
- const adminId = req.user?.id;
+  const adminId = req.user?.id;
 
   if (!adminId) {
-    return res.status(400).json({ message: 'Admin ID is missing from session.' });
+    return res.status(400).json({ message: 'Admin ID is missing from token.' });
   }
 
   try {
     const [rows] = await db.execute(
-      'SELECT id, username, email, full_name, role, permissions FROM admin_auth WHERE id = ?',
+      'SELECT id, username, email, full_name, role FROM admin_auth WHERE id = ?',
       [adminId]
     );
 
@@ -159,10 +159,7 @@ exports.getAdminProfile = async (req, res) => {
 
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
 
-    res.status(200).json({
-      ...admin,
-      permissions: admin.permissions ? JSON.parse(admin.permissions) : {}
-    });
+    res.status(200).json(admin); // ✅ permissions removed
   } catch (err) {
     console.error("Get profile error:", err);
     res.status(500).json({ message: 'Server error', error: err.message });
