@@ -10,7 +10,7 @@ exports.adminLogin = async (req, res) => {
 
   const resetTokens = {}; // Format: { token: { email, expires } }
 
-  
+
   try {
     const [rows] = await db.execute('SELECT * FROM admin_auth WHERE username = ?', [username]);
     const admin = rows[0];
@@ -37,10 +37,12 @@ exports.adminLogin = async (req, res) => {
 
     res.status(200).json({
       message: 'Login successful',
-      token,
-      username: admin.username,
-      role: admin.role,
-      permissions: admin.permissions ? JSON.parse(admin.permissions) : {}
+      data: {
+        token,
+        username: admin.username,
+        role: admin.role,
+        permissions: admin.permissions ? JSON.parse(admin.permissions) : {}
+      }
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -171,7 +173,7 @@ exports.getAdminProfile = async (req, res) => {
 
 
 exports.updateAdminProfile = async (req, res) => {
-const adminId = req.user?.id;
+  const adminId = req.user?.id;
   const { full_name, email } = req.body;
   let profileImage = null;
 
