@@ -19,6 +19,15 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+
+
+// Admin login
+router.get('/', (req, res) => {
+  res.send('✅ Admin base route working');
+});
+// adminRoutes.js
+router.post('/login', adminController.adminLogin);
+
 // Admin-only: Create Subadmin
 router.post("/create-subadmin", isAuthenticated, authorizeRoles("admin"), adminController.createSubadmin);
 
